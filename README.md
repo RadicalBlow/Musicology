@@ -1,6 +1,6 @@
 # Portfolio Computational Musicology
-Repository for Computational Musicology 2022.
-Name: Shankar Rai, Studentnumber: 12520667.
+Repository for Computational Musicology 2022. //
+Name: Shankar Rai, Studentnumber: 12520667. //
 PLEASE DO NOT SHOW THIS PORTFOLIO IN CLASS.
 
 ## Corpus
