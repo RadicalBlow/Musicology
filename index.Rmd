@@ -7,24 +7,40 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(spotifyr)
+library(ggplot2)
+
+westernPop <- get_playlist_audio_features("", "3lro0N5fTyoXFZFbowlcdM")
+westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,]
+koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex")
+allPop <- rbind(westernPop, koreanPop)
+```
+# Portfolio Computational Musicology
+Repository for Computational Musicology 2022.\
+Name: Shankar Rai, Studentnumber: 12520667. \
+PLEASE DO NOT SHOW THIS PORTFOLIO IN CLASS.
+
+## Introduction
+
+For the corpus the 100 most popular western pop music of 2010 - 2020 and the 100 most popular Korean pop (K-pop) music of the recent years will be used. I chose those as I am interested in both of these genres and I listen to them a lot. Therefore I am interested in the similarities and differences between sounds in these genres as K-pop is becoming more and more popular in western countries. I expect there to be differences in the tempo, energy and danceability.
+
+As the corpus makes use of the top 100, of both genres in recent years I would argue that they represent both genres pretty well. One of the weaknesses of the corpus are that it makes use of a list not created by spotify itself. Therefore it may not be an absolute top 100. Another weakness may be that the western list is not only english based, but may also contain latin influences. One extra thing to mark is that some K-pop songs are collabs with western artist.
+
+Some typical track from the western list are: "Shape of You, Ed Sheeran", "Sugar, Maroon 5", "Can't feel my face, The Weeknd". Some typical K-pop tracks are "Dynamite, BTS", "I cant"t stop me, Twice", "Kill This Love, BLACKPINK". These are typical songs as these are from some of the biggest artist in their respective genres. Some interesting songs are: "More, KD/A" and "Kiss and Make Up, "Dua Lipa, BLACKPINK" as these are colab songs with korean and western artists.
+
+Links to the playlists:\
+Western pop: "https://open.spotify.com/playlist/3lro0N5fTyoXFZFbowlcdM" \
+Korean pop: "https://open.spotify.com/playlist/30EtqO7XgA36lwcdj1Uuex"
+
+## Energy Comparison
+
+When looking at the differences between the energy levels of western pop songs and korean pop songs you can certainly see a difference.
+
+```{r energyPlot, echo=FALSE}
+ggplot(allPop, aes(x=energy)) +
+  geom_histogram(bins=20) +
+  facet_wrap(~ playlist_name)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+As is visible in the histogram the mean of the energy of western pop songs is around 0.75, while most of the Korean pop songs have an energy level higher than that. The K-pop songs have a mean energy around 0.9. This shows that K-pop songs have higher energy levels than most of the western songs.
