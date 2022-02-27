@@ -13,6 +13,8 @@ library(flexdashboard)
 library(tidyverse)
 library(spotifyr)
 library(ggplot2)
+library(plotly)
+library(compmus)
 
 westernPop <- get_playlist_audio_features("", "3lro0N5fTyoXFZFbowlcdM")
 westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,]
@@ -36,16 +38,58 @@ Links to the playlists:\
 [Western pop]("https://open.spotify.com/playlist/3lro0N5fTyoXFZFbowlcdM")\
 [Korean pop]("https://open.spotify.com/playlist/30EtqO7XgA36lwcdj1Uuex")
 
-### Comparison
+### Energy level comparison
 
-```{r energyPlot, echo=FALSE}
-ggplot(allPop, aes(x=energy)) +
+```{r, echo=FALSE}
+energy <- ggplot(allPop, aes(x=energy)) +
   geom_histogram(bins=10) +
+  theme_minimal() +
+  labs(
+    x = "Energy Level",
+    y = "Amount of songs",
+    title = "Korean songs seem to have higher energy songs",
+    subtitle = "Comparison of the energy in songs between the two playlists"
+  ) +
   facet_wrap(~ playlist_name)
+
+ggplotly(energy)
+
 ```
 
 ***
 
 When looking at the differences between the energy levels of western pop songs and Korean pop songs you can certainly see a difference.
 
-As is visible in the histogram the mean of the energy of western pop songs is around 0.75, while most of the Korean pop songs have an energy level higher than that. The K-pop songs have a mean energy around 0.9. This shows that K-pop songs have higher energy levels than most of the western songs.
+As is visible in the histogram the mean of the energy of western pop songs is around 0.7, while most of the Korean pop songs have an energy level higher than that. The K-pop songs have a mean energy around 0.85. This shows that K-pop songs have higher energy levels than most of the western songs.
+
+### Chromatic Features of outlier
+
+```{r, echo=FALSE}
+more <-
+  get_tidy_audio_analysis("6juLaduD4STCUDWT0AYun4") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+more %>%
+  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title="Chroma features MORE K/DA") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+```
+
+***
+
+MORE from K/DA is an interesting song as the group K/DA is a virtual group with their real life counterparts being Korean and Western artists. So the songs is made as a collaboration of western and Korean artist and therefore it would be interesting if its possible to see how their styles combine in the music. As is visible in the charts the played notes are definitely pretty consistent. This seems to be more of a western style as it is more common in Korean music to have a lot of switches in the notes. Therefore while it is categorized as K-pop and it is sung by Korean artist the notes and cords still have a Western feel.
+
