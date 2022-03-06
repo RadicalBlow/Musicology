@@ -21,6 +21,56 @@ westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,]
 koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex")
 allPop <- rbind(westernPop, koreanPop)
 ```
+### Self similartity
+```{r, echo=FALSE}
+dc <-
+  get_tidy_audio_analysis("3L74uwShK0JqEUZ5Y2JoDW") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+timbreDF <- dc %>% compmus_self_similarity(timbre, "cosine")
+timbreDF$name <- "Timbre"
+pitchesDF <- dc %>% compmus_self_similarity(pitches, "cosine")
+pitchesDF$name <- "Chroma"
+together <- rbind(pitchesDF, timbreDF)
+
+together %>%
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(x = "", y = "") +
+  facet_wrap(~name)
+
+```
+
+***
+Looking at the chromatic and timbre graphs of the Korean song BEcause from the group Dreamcatcher, you can see some similarities between around 150 and higher.
+
 
 ### Introduction
 
