@@ -17,10 +17,51 @@ library(plotly)
 library(compmus)
 
 westernPop <- get_playlist_audio_features("", "3lro0N5fTyoXFZFbowlcdM")
-westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,]
-koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex")
-allPop <- rbind(westernPop, koreanPop)
+westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,] %>%
+  add_audio_analysis()
+koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex") %>%
+  add_audio_analysis()
+allPop <- 
+  koreanPop %>%
+  mutate(genre = "Korean Pop") %>%
+  bind_rows(westernPop %>% mutate(genre="Western Pop"))
 ```
+### Comparison of lower-track features
+```{r, echo=FALSE}
+allPop %>%
+  mutate(
+    sections =
+      map(
+        sections,                                    # sections or segments
+        summarise_at,
+        vars(tempo, loudness, duration),             # features of interest
+        list(section_mean = mean, section_sd = sd)   # aggregation functions
+      )
+  ) %>%
+  unnest(sections) %>%
+  ggplot(
+    aes(
+      x = tempo,
+      y = tempo_section_sd,
+      colour = genre,
+      alpha = loudness
+    )
+  ) +
+  geom_point(aes(size = duration / 60)) +
+  geom_rug() +
+  theme_minimal() +
+  ylim(0, 5) +
+  labs(
+    x = "Mean Tempo (bpm)",
+    y = "SD Tempo",
+    colour = "Genre",
+    size = "Duration (min)",
+    alpha = "Volume (dBFS)"
+  )
+```
+***
+This plot visualizes the mean tempo of the songs in the two different playlist and their standard deviations. As is visible a lot of the songs from both playlists are fairly similar range in their tempo and their standard deviations. This seems to be quite logical as pop music is forged from music that is appealing to most people. So they keep around the same foundation. What is also visible from the plot is that the duration of most of the songs is also similar, around 3 - 3.5. There are however some differences visible in the volume of the songs.
+
 ### Self similartity
 ```{r, echo=FALSE}
 dc <-
@@ -100,7 +141,7 @@ energy <- ggplot(allPop, aes(x=energy)) +
     title = "Korean songs seem to have higher energy songs",
     subtitle = "Comparison of the energy in songs between the two playlists"
   ) +
-  facet_wrap(~ playlist_name)
+  facet_wrap(~genre)
 
 ggplotly(energy)
 
