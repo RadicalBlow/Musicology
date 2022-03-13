@@ -26,6 +26,7 @@ allPop <-
   mutate(genre = "Korean Pop") %>%
   bind_rows(westernPop %>% mutate(genre="Western Pop"))
 ```
+
 ### Comparison of lower-track features
 ```{r, echo=FALSE}
 allPop %>%
@@ -59,6 +60,7 @@ allPop %>%
     alpha = "Volume (dBFS)"
   )
 ```
+
 ***
 This plot visualizes the mean tempo of the songs in the two different playlist and their standard deviations. As is visible a lot of the songs from both playlists are fairly similar range in their tempo and their standard deviations. This seems to be quite logical as pop music is forged from music that is appealing to most people. So they keep around the same foundation. What is also visible from the plot is that the duration of most of the songs is also similar, around 3 - 3.5. There are however some differences visible in the volume of the songs.
 
