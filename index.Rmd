@@ -34,6 +34,15 @@ allPop <-
 
 ### Classifying between the two genres
 ```{r, echo=FALSE}
+get_pr <- function(fit) {
+  fit %>% 
+    conf_mat_resampled() %>% 
+    group_by(Prediction) %>% mutate(precision = Freq / sum(Freq)) %>% 
+    group_by(Truth) %>% mutate(recall = Freq / sum(Freq)) %>% 
+    ungroup() %>% filter(Prediction == Truth) %>% 
+    select(class = Prediction, precision, recall)
+}  
+
 features <-
   allPop %>%
   mutate(
