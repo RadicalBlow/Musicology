@@ -27,6 +27,108 @@ allPop <-
   bind_rows(westernPop %>% mutate(genre="Western Pop"))
 ```
 
+### Classifying between the two genres
+```{r, echo=FALSE}
+get_pr <- function(fit) {
+  fit %>% 
+    conf_mat_resampled() %>% 
+    group_by(Prediction) %>% mutate(precision = Freq / sum(Freq)) %>% 
+    group_by(Truth) %>% mutate(recall = Freq / sum(Freq)) %>% 
+    ungroup() %>% filter(Prediction == Truth) %>% 
+    select(class = Prediction, precision, recall)
+}  
+
+features <-
+  allPop %>%
+  mutate(
+    genre = factor(genre),
+    segments = map2(segments, key, compmus_c_transpose),
+    pitches =
+      map(
+        segments,
+        compmus_summarise, pitches,
+        method = "mean", norm = "manhattan"
+      ),
+    timbre =
+      map(
+        segments,
+        compmus_summarise, timbre,
+        method = "mean",
+      )
+  ) %>%
+  mutate(pitches = map(pitches, compmus_normalise, "clr")) %>%
+  mutate_at(vars(pitches, timbre), map, bind_rows) %>%
+  unnest(cols = c(pitches, timbre))
+
+pop_recipe <-
+  recipe(
+    genre ~
+      danceability +
+      energy +
+      loudness +
+      speechiness +
+      acousticness +
+      instrumentalness +
+      liveness +
+      valence +
+      tempo +
+      duration +
+      C + `C#|Db` + D + `D#|Eb` +
+      E + `F` + `F#|Gb` + G +
+      `G#|Ab` + A + `A#|Bb` + B +
+      c01 + c02 + c03 + c04 + c05 + c06 +
+      c07 + c08 + c09 + c10 + c11 + c12,
+    data = features,          # Use the same name as the previous block.
+  )
+
+pop_cv <- features %>% vfold_cv(5)
+
+forest_model <-
+  rand_forest() %>%
+  set_mode("classification") %>% 
+  set_engine("ranger", importance = "impurity")
+pop_forest <- 
+  workflow() %>% 
+  add_recipe(pop_recipe) %>% 
+  add_model(forest_model) %>% 
+  fit_resamples(
+    pop_cv, 
+    control = control_resamples(save_pred = TRUE)
+  )
+pop_forest %>% get_pr()
+
+workflow() %>% 
+  add_recipe(pop_recipe) %>% 
+  add_model(forest_model) %>% 
+  fit(features) %>% 
+  pluck("fit", "fit", "fit") %>%
+  ranger::importance() %>% 
+  enframe() %>% 
+  mutate(name = fct_reorder(name, value)) %>% 
+  ggplot(aes(name, value)) + 
+  geom_col() + 
+  coord_flip() +
+  theme_minimal() +
+  labs(x = NULL, y = "Importance")
+
+plot_diff <- features %>%
+  ggplot(aes(x = loudness, y = c01, colour = genre, size = duration)) +
+  geom_point(alpha = 0.8) +
+  scale_color_viridis_d() +
+  labs(
+    x = "Timbre Component 1",
+    y = "Loudness",
+    size = "Duration",
+    colour = "Genre"
+  )
+
+ggplotly(plot_diff)
+```
+
+***
+These visualizations indicate the differences between the two genres and on what features a Random Forest Classifier based its classifications. The precision and recall of the classifier are pretty good and according to the workflow this is mostly due to the first timbre component, loudness and duration of the songs. Visualizing these features in a graph makes it visible that these features indeed form a pretty good identifier for these genres. There is a decent possible separation line between the two genres based on these three alone. This would explain the good precision and recall as well. Note: The legend of the plot is not that nice as there is a problem with the conversion from the ggplot to ggplotly, trying to figure this out. The size of the dots indicate the duration of the song.
+
+
 ### Comparison of lower-track features
 ```{r, echo=FALSE}
 allPop %>%
