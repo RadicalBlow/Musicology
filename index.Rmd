@@ -15,6 +15,11 @@ library(spotifyr)
 library(ggplot2)
 library(plotly)
 library(compmus)
+library(tidymodels)
+library(modeldata)
+library(recipes)
+library(heatmaply)
+library(ggdendro)
 
 westernPop <- get_playlist_audio_features("", "3lro0N5fTyoXFZFbowlcdM")
 westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,] %>%
@@ -29,15 +34,6 @@ allPop <-
 
 ### Classifying between the two genres
 ```{r, echo=FALSE}
-get_pr <- function(fit) {
-  fit %>% 
-    conf_mat_resampled() %>% 
-    group_by(Prediction) %>% mutate(precision = Freq / sum(Freq)) %>% 
-    group_by(Truth) %>% mutate(recall = Freq / sum(Freq)) %>% 
-    ungroup() %>% filter(Prediction == Truth) %>% 
-    select(class = Prediction, precision, recall)
-}  
-
 features <-
   allPop %>%
   mutate(
