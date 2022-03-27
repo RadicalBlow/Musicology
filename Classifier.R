@@ -102,7 +102,7 @@ workflow() %>%
   labs(x = NULL, y = "Importance")
 
 plot_diff <- features %>%
-  ggplot(aes(x = c01, y = loudness, colour = genre, size = duration)) +
+  ggplot(aes(x = loudness, y = c01, colour = genre, size = duration)) +
   geom_point(alpha = 0.8) +
   scale_color_viridis_d() +
   labs(

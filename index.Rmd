@@ -101,11 +101,13 @@ pop_forest <-
     control = control_resamples(save_pred = TRUE)
   )
 ```
+
 #### Precision and Recall
 ```{r, echo=FALSE}
 pop_forest %>% get_pr()
 
 ```
+
 #### Feature Importance
 ```{r, echo=FALSE}
 workflow() %>% 
@@ -123,6 +125,7 @@ workflow() %>%
   labs(x = NULL, y = "Importance")
 
 ```
+
 #### Plot of the differences
 ```{r, echo=FALSE}
 plot_diff <- features %>%
@@ -139,7 +142,6 @@ plot_diff <- features %>%
 ggplotly(plot_diff)
 
 ```
-
 
 ***
 These visualizations indicate the differences between the two genres and on what features a Random Forest Classifier based its classifications. The precision and recall of the classifier are both around the 0.8 and according to the workflow this is mostly due to the first timbre component, loudness and duration of the songs. Visualizing these features in a graph makes it visible that these features indeed form a pretty good identifier for these genres. There is a decent possible separation line between the two genres based on these three alone. This would explain the good precision and recall as well. Note: The legend of the plot is not that nice as there is a problem with the conversion from the ggplot to ggplotly, trying to figure this out. The size of the dots indicate the duration of the song.
