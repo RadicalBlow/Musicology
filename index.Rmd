@@ -1,6 +1,6 @@
 ---
 title: "K-Pop vs Western Pop"
-author: "Shankar Rai"
+author: "Shankar Rai, 12520667"
 date: "`r Sys.Date()`"
 output: 
   flexdashboard::flex_dashboard:
@@ -22,15 +22,203 @@ library(heatmaply)
 library(ggdendro)
 
 westernPop <- get_playlist_audio_features("", "3lro0N5fTyoXFZFbowlcdM")
-westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,] %>%
-  add_audio_analysis()
-koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex") %>%
-  add_audio_analysis()
+westernPop <- westernPop[!is.na(westernPop$tempo), ][1:100,]
+koreanPop <- get_playlist_audio_features("", "30EtqO7XgA36lwcdj1Uuex")
 allPop <- 
   koreanPop %>%
   mutate(genre = "Korean Pop") %>%
-  bind_rows(westernPop %>% mutate(genre="Western Pop"))
+  bind_rows(westernPop %>% mutate(genre="Western Pop")) %>%
+  add_audio_analysis()
 ```
+### Introduction
+For this corpus I will make use of 100 popular Korean pop (K-Pop) songs and 100 western pop songs, both coming from the recent years. This corpus was chosen as I listen to a lot of songs from both genres and I really enjoy those. Therefor I would like to discover some more about the differences and similarities in songs from both these genres. This is also a relevant research as the K-Pop industry is becoming a larger worldwide presence and therefore this will also be interesting. As the genres as both of a pop category I would expect there to be a lot of similarities, but I still hope to find some differences.
+
+As this corpus makes use of 100 popular songs from both these genres in the recent years I would argue that they represent their respective genre pretty well. One of the weaknesses of the corpus is that is makes use of a list not created by Spotify itself, therefore it may contain some personal preferences. An interesting mark for the corpus is that the K-Pop playlist contains some songs that are collaborations between Western and Korean artists.
+
+Some typical track from the Western list are: "Shape of You, Ed Sheeran", "Sugar, Maroon 5", "Can't feel my face, The Weeknd". Some typical K-pop tracks are "Dynamite, BTS", "I cant"t stop me, Twice", "Kill This Love, BLACKPINK". These are typical songs as these are from some of the biggest artist in their respective genres. Some interesting songs are: "More, KD/A" and "Kiss and Make Up, "Dua Lipa, BLACKPINK" as these are collaborated songs with Korean and western artists.
+
+Links to the playlists:\
+[Western pop]("https://open.spotify.com/playlist/3lro0N5fTyoXFZFbowlcdM")\
+[Korean pop]("https://open.spotify.com/playlist/30EtqO7XgA36lwcdj1Uuex")
+
+
+### Comparing energy levels of both genres
+
+```{r, echo=FALSE}
+energy <- ggplot(allPop, aes(x=energy)) +
+  geom_histogram(bins=10) +
+  theme_minimal() +
+  labs(
+    x = "Energy Level",
+    y = "Amount of songs",
+    title = "Korean songs seem to have higher energy songs",
+    subtitle = "Comparison of the energy in songs between the two playlists"
+  ) +
+  facet_wrap(~genre)
+
+ggplotly(energy)
+
+```
+
+***
+
+When looking at the differences between the energy levels of western pop songs and Korean pop songs you can certainly see a difference.
+
+As is visible in the histogram the mean of the energy of western pop songs is around 0.7, while most of the Korean pop songs have an energy level higher than that. The K-pop songs have a mean energy around 0.85. This shows that K-pop songs have higher energy levels than most of the western songs.
+
+### Chromatic Features of an interesting song
+
+```{r, echo=FALSE}
+more <-
+  get_tidy_audio_analysis("6juLaduD4STCUDWT0AYun4") %>%
+  select(segments) %>%
+  unnest(segments) %>%
+  select(start, duration, pitches)
+
+more %>%
+  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) %>%
+  compmus_gather_chroma() %>% 
+  ggplot(
+    aes(
+      x = start + duration / 2,
+      width = duration,
+      y = pitch_class,
+      fill = value
+    )
+  ) +
+  geom_tile() +
+  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title="Chroma features of MORE K/DA") +
+  theme_minimal() +
+  scale_fill_viridis_c()
+
+```
+
+***
+
+MORE from K/DA is an interesting song as the group K/DA is a virtual group with their real life counterparts being Korean and Western artists. So the songs is made as a collaboration of western and Korean artist and therefore it would be interesting if its possible to see how their styles combine in the music. As is visible in the charts there is a clear tonal center around the C sharp. This seems to be more of a western style as it is more common in Korean music to have a some switches in the notes. Therefore while it is categorized as K-pop and it is sung by Korean artist the notes and cords still have a Western feel.
+
+### Looking at a self-similarity matrix
+```{r, echo=FALSE}
+dc <-
+  get_tidy_audio_analysis("3L74uwShK0JqEUZ5Y2JoDW") %>% # Change URI.
+  compmus_align(bars, segments) %>%                     # Change `bars`
+  select(bars) %>%                                      #   in all three
+  unnest(bars) %>%                                      #   of these lines.
+  mutate(
+    pitches =
+      map(segments,
+          compmus_summarise, pitches,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  ) %>%
+  mutate(
+    timbre =
+      map(segments,
+          compmus_summarise, timbre,
+          method = "rms", norm = "euclidean"              # Change summary & norm.
+      )
+  )
+
+timbreDF <- dc %>% compmus_self_similarity(timbre, "cosine")
+timbreDF$name <- "Timbre"
+pitchesDF <- dc %>% compmus_self_similarity(pitches, "cosine")
+pitchesDF$name <- "Chroma"
+together <- rbind(pitchesDF, timbreDF)
+
+together %>%
+  ggplot(
+    aes(
+      x = xstart + xduration / 2,
+      width = xduration,
+      y = ystart + yduration / 2,
+      height = yduration,
+      fill = d
+    )
+  ) +
+  geom_tile() +
+  coord_fixed() +
+  scale_fill_viridis_c(guide = "none") +
+  theme_classic() +
+  labs(
+    x = "Time (s)",
+    y = "Time (S)",
+    title = "Self-similarity matrix of BEcause",
+    subtitle = "Looking at the chroma and timbre matrices"
+  ) +
+  facet_wrap(~name)
+
+```
+
+***
+
+The korean group Dreamcatcher is one of my favourite groups and therefore I wanted to look at a self-similarity matrix from their recent song BEcause.In the graphs you can find the matrices for the chromatic features and the timbre of the songs. In chroma graph you can see that there are a lot of similarities, but also some differences at the start and at the end around 130. While listening to the song these can be related to the introduction and the bridge section at the end. At the start of the intro you can quietly hear the main chords, but the emphasis lies on a certain jumping sound that is not heard again later on in the song. The bridge section is totally different from the rest of the song as most music gets taken out of the song and there are only some subtle background sounds accompanied by different chords. The timbre graph also shows the same findings. The whole introduction is mostly accompanied by some drums and a piano, while the rest of the song is mostly accompanied by metallic guitars and drums. Also the bridge can be seen in the graph. Like said earlier most of the accompanying music fades away and all you hear are some high sung lyrics and some ticking and a piano.
+
+### Comparing tempograms
+```{r, echo=FALSE}
+shape <- get_tidy_audio_analysis("7qiZfU4dY1lWllzX7mPBI3") %>%
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) %>%
+  mutate(song="Shape of You")
+stop <- get_tidy_audio_analysis("37ZtpRBkHcaq6hHy0X98zn") %>%
+  tempogram(window_size = 8, hop_size = 1, cyclic = TRUE) %>%
+  mutate(song="I can't stop me")
+
+together <- rbind(shape, stop)
+
+together%>%
+  ggplot(aes(x = time, y = bpm, fill = power)) +
+  geom_raster() +
+  scale_fill_viridis_c(guide = "none") +
+  labs(
+    x = "Time (s)", 
+    y = "Tempo (BPM)",
+    title = "Comparing two tempograms",
+    subtitle = "Looking at the tempograms from two typical songs") +
+  theme_classic() +
+  facet_wrap(~song)
+```
+
+***
+Here are two tempograms of typical songs from the two genres. "I cant"t stop me" from Twice and "Shape of You" from Ed Sheeran. In both of the tempograms you can see a clear line that indicates the tempo of the song. The first is around 150bpm and the second around 90bpm. Looking at these visualisations you can see that the K-Pop song has a much higher bpm than the Wester pop song.
+
+
+### Comparison of lower-track features
+```{r, echo=FALSE}
+allPop %>%
+  mutate(
+    sections =
+      map(
+        sections,                                    # sections or segments
+        summarise_at,
+        vars(tempo, loudness, duration),             # features of interest
+        list(section_mean = mean, section_sd = sd)   # aggregation functions
+      )
+  ) %>%
+  unnest(sections) %>%
+  ggplot(
+    aes(
+      x = tempo,
+      y = tempo_section_sd,
+      colour = genre,
+      alpha = loudness
+    )
+  ) +
+  geom_point(aes(size = duration / 60)) +
+  geom_rug() +
+  theme_minimal() +
+  ylim(0, 3) +
+  labs(
+    x = "Mean Tempo (bpm)",
+    y = "SD Tempo",
+    colour = "Genre",
+    size = "Duration (min)",
+    alpha = "Volume (dBFS)"
+  )
+```
+
+***
+
+This plot visualizes the mean tempo of the songs in the two different playlist against their standard deviations. The duration of the songs are displayed in the sizes of the data points and the opacity indicates that how loud a song is. As is visible a lot of the songs from both playlists are in a fairly similar range in terms of their tempo standard deviations (around 0-1 bpm) as well as their mean tempo (around 100-150 bpm). This seems to be quite logical as pop music is forged from music that is appealing to most people. So they keep around the same foundation. What is also visible from the plot is that the duration and the loudness of most of the songs differs a lot as there are a lot of different sized data points with different opacity. 
+
 
 ### Classifying between the two genres
 ```{r, echo=FALSE}
@@ -108,6 +296,10 @@ pop_forest %>% get_pr()
 
 ```
 
+***
+
+For these visualization I trained and tested a Random Forest Classifier on my corpus. The results are pretty good as both precision and recall are around the 0.8.
+
 #### Feature Importance
 ```{r, echo=FALSE}
 workflow() %>% 
@@ -126,9 +318,13 @@ workflow() %>%
 
 ```
 
+***
+
+According to the workflow the most important features for the classification are the first timbre component, loudness and the duration of the songs. This makes sense as earlier was also discovered that a lot of K-Pop songs have higher energy levels then the Western pop songs.
+
 #### Plot of the differences
 ```{r, echo=FALSE}
-plot_diff <- features %>%
+features %>%
   ggplot(aes(x = loudness, y = c01, colour = genre, size = duration)) +
   geom_point(alpha = 0.8) +
   scale_color_viridis_d() +
@@ -136,173 +332,17 @@ plot_diff <- features %>%
     x = "Timbre Component 1",
     y = "Loudness",
     size = "Duration",
-    colour = "Genre"
-  )
-
-ggplotly(plot_diff)
-
-```
-
-***
-These visualizations indicate the differences between the two genres and on what features a Random Forest Classifier based its classifications. The precision and recall of the classifier are both around the 0.8 and according to the workflow this is mostly due to the first timbre component, loudness and duration of the songs. Visualizing these features in a graph makes it visible that these features indeed form a pretty good identifier for these genres. There is a decent possible separation line between the two genres based on these three alone. This would explain the good precision and recall as well. Note: The legend of the plot is not that nice as there is a problem with the conversion from the ggplot to ggplotly, trying to figure this out. The size of the dots indicate the duration of the song.
-
-
-### Comparison of lower-track features
-```{r, echo=FALSE}
-allPop %>%
-  mutate(
-    sections =
-      map(
-        sections,                                    # sections or segments
-        summarise_at,
-        vars(tempo, loudness, duration),             # features of interest
-        list(section_mean = mean, section_sd = sd)   # aggregation functions
-      )
-  ) %>%
-  unnest(sections) %>%
-  ggplot(
-    aes(
-      x = tempo,
-      y = tempo_section_sd,
-      colour = genre,
-      alpha = loudness
-    )
-  ) +
-  geom_point(aes(size = duration / 60)) +
-  geom_rug() +
-  theme_minimal() +
-  ylim(0, 5) +
-  labs(
-    x = "Mean Tempo (bpm)",
-    y = "SD Tempo",
     colour = "Genre",
-    size = "Duration (min)",
-    alpha = "Volume (dBFS)"
-  )
-```
-
-***
-This plot visualizes the mean tempo of the songs in the two different playlist and their standard deviations. As is visible a lot of the songs from both playlists are fairly similar range in their tempo and their standard deviations. This seems to be quite logical as pop music is forged from music that is appealing to most people. So they keep around the same foundation. What is also visible from the plot is that the duration of most of the songs is also similar, around 3 - 3.5. There are however some differences visible in the volume of the songs.
-
-### Self similartity
-```{r, echo=FALSE}
-dc <-
-  get_tidy_audio_analysis("3L74uwShK0JqEUZ5Y2JoDW") %>% # Change URI.
-  compmus_align(bars, segments) %>%                     # Change `bars`
-  select(bars) %>%                                      #   in all three
-  unnest(bars) %>%                                      #   of these lines.
-  mutate(
-    pitches =
-      map(segments,
-          compmus_summarise, pitches,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
-  ) %>%
-  mutate(
-    timbre =
-      map(segments,
-          compmus_summarise, timbre,
-          method = "rms", norm = "euclidean"              # Change summary & norm.
-      )
+    title = "Comparing important features",
+    subtitle = "Looking at the features that are important according to workflow"
   )
 
-timbreDF <- dc %>% compmus_self_similarity(timbre, "cosine")
-timbreDF$name <- "Timbre"
-pitchesDF <- dc %>% compmus_self_similarity(pitches, "cosine")
-pitchesDF$name <- "Chroma"
-together <- rbind(pitchesDF, timbreDF)
-
-together %>%
-  ggplot(
-    aes(
-      x = xstart + xduration / 2,
-      width = xduration,
-      y = ystart + yduration / 2,
-      height = yduration,
-      fill = d
-    )
-  ) +
-  geom_tile() +
-  coord_fixed() +
-  scale_fill_viridis_c(guide = "none") +
-  theme_classic() +
-  labs(x = "", y = "") +
-  facet_wrap(~name)
-
-```
-
-***
-Looking at the chromatic and timbre graphs of the Korean song BEcause from the group Dreamcatcher, you can see some similarities between around 150 and higher.
-
-
-### Introduction
-
-Repository for Computational Musicology 2022.\
-Name: Shankar Rai, Student number: 12520667. \
-PLEASE DO NOT SHOW THIS PORTFOLIO IN CLASS.
-
-For the corpus the 100 most popular western pop music of 2010 - 2020 and the 100 most popular Korean pop (K-pop) music of the recent years will be used. I chose those as I am interested in both of these genres and I listen to them a lot. Therefore I am interested in the similarities and differences between sounds in these genres as K-pop is becoming more and more popular in western countries. I expect there to be differences in the tempo, energy and danceability.
-
-As the corpus makes use of the top 100, of both genres in recent years I would argue that they represent both genres pretty well. One of the weaknesses of the corpus are that it makes use of a list not created by spotify itself. Therefore it may not be an absolute top 100. Another weakness may be that the western list is not only English based, but may also contain Latin influences. One extra thing to mark is that some K-pop songs are collaborations with western artist.
-
-Some typical track from the western list are: "Shape of You, Ed Sheeran", "Sugar, Maroon 5", "Can't feel my face, The Weeknd". Some typical K-pop tracks are "Dynamite, BTS", "I cant"t stop me, Twice", "Kill This Love, BLACKPINK". These are typical songs as these are from some of the biggest artist in their respective genres. Some interesting songs are: "More, KD/A" and "Kiss and Make Up, "Dua Lipa, BLACKPINK" as these are collaborated songs with Korean and western artists.
-
-Links to the playlists:\
-[Western pop]("https://open.spotify.com/playlist/3lro0N5fTyoXFZFbowlcdM")\
-[Korean pop]("https://open.spotify.com/playlist/30EtqO7XgA36lwcdj1Uuex")
-
-### Energy level comparison
-
-```{r, echo=FALSE}
-energy <- ggplot(allPop, aes(x=energy)) +
-  geom_histogram(bins=10) +
-  theme_minimal() +
-  labs(
-    x = "Energy Level",
-    y = "Amount of songs",
-    title = "Korean songs seem to have higher energy songs",
-    subtitle = "Comparison of the energy in songs between the two playlists"
-  ) +
-  facet_wrap(~genre)
-
-ggplotly(energy)
-
 ```
 
 ***
 
-When looking at the differences between the energy levels of western pop songs and Korean pop songs you can certainly see a difference.
+Visualizing these features in a graph makes it visible that these features indeed form a pretty good identifier for these genres. There is a decent possible separation line between the two genres based on these three alone. This would explain the good precision and recall as well.
 
-As is visible in the histogram the mean of the energy of western pop songs is around 0.7, while most of the Korean pop songs have an energy level higher than that. The K-pop songs have a mean energy around 0.85. This shows that K-pop songs have higher energy levels than most of the western songs.
-
-### Chromatic Features of outlier
-
-```{r, echo=FALSE}
-more <-
-  get_tidy_audio_analysis("6juLaduD4STCUDWT0AYun4") %>%
-  select(segments) %>%
-  unnest(segments) %>%
-  select(start, duration, pitches)
-
-more %>%
-  mutate(pitches = map(pitches, compmus_normalise, "chebyshev")) %>%
-  compmus_gather_chroma() %>% 
-  ggplot(
-    aes(
-      x = start + duration / 2,
-      width = duration,
-      y = pitch_class,
-      fill = value
-    )
-  ) +
-  geom_tile() +
-  labs(x = "Time (s)", y = NULL, fill = "Magnitude", title="Chroma features MORE K/DA") +
-  theme_minimal() +
-  scale_fill_viridis_c()
-
-```
-
-***
-
-MORE from K/DA is an interesting song as the group K/DA is a virtual group with their real life counterparts being Korean and Western artists. So the songs is made as a collaboration of western and Korean artist and therefore it would be interesting if its possible to see how their styles combine in the music. As is visible in the charts the played notes are definitely pretty consistent. This seems to be more of a western style as it is more common in Korean music to have a lot of switches in the notes. Therefore while it is categorized as K-pop and it is sung by Korean artist the notes and cords still have a Western feel.
+### Conclusion
+After looking at both genres it is possible to come to some conclusions. There seem to be a certain amount of similarities between K-Pop and Western Pop, such as the tempo of the songs. There are however also some differences between them, such as the timbre, energy and duration. As the classifier shows it is almost perfectly possible to predict to which genre a song belongs according to these differences.Because of this I think that a lot of people are starting to like K-Pop as it still has some aspect of the music that they are used to in the West. The difference nonetheless still make it feel different and new. Which in turn makes it more enjoyable and interesting to hear.
 
